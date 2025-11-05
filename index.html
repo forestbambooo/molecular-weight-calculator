@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>Molcular_Weight_Calculator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 1.5rem;
+      background: #f8fafc;
+    }
+    h1 {
+      margin-bottom: 1rem;
+    }
+    .controls {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    button {
+      cursor: pointer;
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 6px;
+    }
+    #add-btn {
+      background: #0ea5e9;
+      color: white;
+    }
+    #remove-btn {
+      background: #e11d48;
+      color: white;
+    }
+    .picker-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+      flex-wrap: wrap;
+    }
+    select {
+      padding: 0.35rem;
+      border-radius: 4px;
+      border: 1px solid #cbd5f5;
+      min-width: 120px;
+    }
+    #result-box {
+      margin: 1rem 0;
+      font-size: 1.05rem;
+      font-weight: bold;
+      line-height: 1.5;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+    }
+    th, td {
+      border: 1px solid #e2e8f0;
+      padding: 0.4rem 0.5rem;
+      text-align: left;
+    }
+    th {
+      background: #eff6ff;
+    }
+    .section-title {
+      margin-top: 1.5rem;
+      margin-bottom: 0.5rem;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Molcular_Weight_Calculator</h1>
+
+  <div class="controls">
+    <button id="add-btn">＋ Add Atoms</button>
+    <button id="remove-btn">－ Reduce Atoms</button>
+  </div>
+
+  <div id="pickers"></div>
+
+  <div id="result-box">
+    Chemical Formula: <span id="formula">—</span><br />
+    Molecular weight: <span id="total-mw">0.000</span>
+  </div>
+
+  <div class="section-title">Using Atoms</div>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Atomic Symbol</th>
+        <th>Atomic Weight</th>
+        <th>Number</th>
+        <th>Subtotal</th>
+      </tr>
+    </thead>
+    <tbody id="atom-table-body"></tbody>
+  </table>
+
+  <script>
+    const element_symbol = [
+      'H','He','Li','Be','B','C','N','O','F','Ne',
+      'Na','Mg','Al','Si','P','S','Cl','Ar',
+      'K','Ca','Sc','Ti','V','Cr','Mn','Fe','Co','Ni','Cu','Zn',
+      'Ga','Ge','As','Se','Br','Kr',
+      'Rb','Sr','Y','Zr','Nb','Mo','Tc','Ru','Rh','Pd','Ag','Cd','In','Sn','Sb','Te','I','Xe',
+      'Cs','Ba','La','Ce','Pr','Nd','Pm','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu',
+      'Hf','Ta','W','Re','Os','Ir','Pt','Au','Hg','Tl','Pb','Bi','Po','At','Rn',
+      'Fr','Ra','Ac','Th','Pa','U','Np','Pu','Am','Cm','Bk','Cf','Es','Fm','Md','No','Lr',
+      'Rf','Db','Sg','Bh','Hs','Mt','Ds','Rg','Cn','Nh','Fl','Mc','Lv','Ts','Og'
+    ];
+
+    // 括弧や角括弧を落とした実数値（推定値はそのまま数字だけ）
+    // reference:ATOMIC WEIGHTS OF THE ELEMENTS 2023, (https://iupac.qmul.ac.uk/AtWt/)
+    const atomic_weight = [
+      1.008,
+      4.002602,
+      6.94,
+      9.0121831,
+      10.81,
+      12.011,
+      14.007,
+      15.999,
+      18.998403162,
+      20.1797,
+      22.98976928,
+      24.305,
+      26.9815384,
+      28.085,
+      30.973761998,
+      32.06,
+      35.45,
+      39.95,
+      39.0983,
+      40.078,
+      44.955907,
+      47.867,
+      50.9415,
+      51.9961,
+      54.938043,
+      55.845,
+      58.933194,
+      58.6934,
+      63.546,
+      65.38,
+      69.723,
+      72.63,
+      74.921595,
+      78.971,
+      79.904,
+      83.798,
+      85.4678,
+      87.62,
+      88.905838,
+      91.222,
+      92.90637,
+      95.95,
+      97.0,          // Tc [97]
+      101.07,
+      102.90549,
+      106.42,
+      107.8682,
+      112.414,
+      114.818,
+      118.71,
+      121.76,
+      127.6,
+      126.90447,
+      131.293,
+      132.90545196,
+      137.327,
+      138.90547,
+      140.116,
+      140.90766,
+      144.242,
+      145.0,         // Pm [145]
+      150.36,
+      151.964,
+      157.249,
+      158.925354,
+      162.5,
+      164.930329,
+      167.259,
+      168.934219,
+      173.045,
+      174.96669,
+      178.486,
+      180.94788,
+      183.84,
+      186.207,
+      190.23,
+      192.217,
+      195.084,
+      196.96657,
+      200.592,
+      204.38,
+      207.2,
+      208.9804,
+      209.0,   // Po [209]
+      210.0,   // At [210]
+      222.0,   // Rn [222]
+      223.0,   // Fr [223]
+      226.0,   // Ra [226]
+      227.0,   // Ac [227]
+      232.0377,
+      231.03588,
+      238.02891,
+      237.0,   // Np [237]
+      244.0,   // Pu [244]
+      243.0,   // Am [243]
+      247.0,   // Cm [247]
+      247.0,   // Bk [247]
+      251.0,   // Cf [251]
+      252.0,   // Es [252]
+      257.0,   // Fm [257]
+      258.0,   // Md [258]
+      259.0,   // No [259]
+      262.0,   // Lr [262]
+      267.0,   // Rf [267]
+      270.0,   // Db [270]
+      269.0,   // Sg [269]
+      270.0,   // Bh [270]
+      270.0,   // Hs [270]
+      278.0,   // Mt [278]
+      281.0,   // Ds [281]
+      281.0,   // Rg [281]
+      285.0,   // Cn [285]
+      286.0,   // Nh [286]
+      289.0,   // Fl [289]
+      289.0,   // Mc [289]
+      293.0,   // Lv [293]
+      293.0,   // Ts [293]
+      294.0    // Og [294]
+    ];
+
+    // 配列から連想配列をつくる
+    const ATOMIC_WEIGHTS = {};
+    for (let i = 0; i < element_symbol.length; i++) {
+      ATOMIC_WEIGHTS[element_symbol[i]] = atomic_weight[i];
+    }
+
+    const pickersContainer = document.getElementById('pickers');
+    const totalMwEl = document.getElementById('total-mw');
+    const formulaEl = document.getElementById('formula');
+    const tableBody = document.getElementById('atom-table-body');
+    const addBtn = document.getElementById('add-btn');
+    const removeBtn = document.getElementById('remove-btn');
+
+    let pickerCount = 0;
+
+    function createPickerRow() {
+      pickerCount += 1;
+      const row = document.createElement('div');
+      row.className = 'picker-row';
+      row.dataset.index = pickerCount;
+
+      // 元素セレクト
+      const atomSelect = document.createElement('select');
+      atomSelect.name = `atom-${pickerCount}`;
+      // 原子番号順に並んでいるのでそのまま表示
+      element_symbol.forEach(sym => {
+        const opt = document.createElement('option');
+        opt.value = sym;
+        opt.textContent = sym;
+        atomSelect.appendChild(opt);
+      });
+
+      // 個数セレクト
+      const countSelect = document.createElement('select');
+      countSelect.name = `count-${pickerCount}`;
+      for (let i = 0; i <= 99; i++) {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = i;
+        countSelect.appendChild(opt);
+      }
+
+      atomSelect.addEventListener('change', updateAll);
+      countSelect.addEventListener('change', updateAll);
+
+      row.appendChild(atomSelect);
+      row.appendChild(countSelect);
+      return row;
+    }
+
+    // 分子式を作る（C, H を先頭にして残りはアルファベット順）
+    function buildFormula(countMap) {
+      const parts = [];
+      if (countMap["C"]) {
+        parts.push("C" + (countMap["C"] > 1 ? countMap["C"] : ""));
+      }
+      if (countMap["H"]) {
+        parts.push("H" + (countMap["H"] > 1 ? countMap["H"] : ""));
+      }
+      Object.keys(countMap)
+        .filter(k => k !== "C" && k !== "H" && countMap[k] > 0)
+        .sort()
+        .forEach(sym => {
+          const n = countMap[sym];
+          parts.push(sym + (n > 1 ? n : ""));
+        });
+      return parts.length ? parts.join("") : "—";
+    }
+
+    function updateAll() {
+      let total = 0;
+      tableBody.innerHTML = '';
+
+      const elementCounts = {};
+
+      const rows = pickersContainer.querySelectorAll('.picker-row');
+      rows.forEach((row, idx) => {
+        const atom = row.querySelector('select[name^="atom"]').value;
+        const count = parseInt(row.querySelector('select[name^="count"]').value, 10);
+        const aw = ATOMIC_WEIGHTS[atom] || 0;
+        const subtotal = aw * count;
+        total += subtotal;
+
+        // 分子式用カウント
+        if (!elementCounts[atom]) elementCounts[atom] = 0;
+        elementCounts[atom] += count;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${idx + 1}</td>
+          <td>${atom}</td>
+          <td>${aw ? aw.toFixed(6) : "-"}</td>
+          <td>${count}</td>
+          <td>${subtotal ? subtotal.toFixed(6) : "-"}</td>
+        `;
+        tableBody.appendChild(tr);
+      });
+
+      totalMwEl.textContent = total.toFixed(3);
+      formulaEl.textContent = buildFormula(elementCounts);
+    }
+
+    addBtn.addEventListener('click', () => {
+      const newRow = createPickerRow();
+      pickersContainer.appendChild(newRow);
+      updateAll();
+    });
+
+    removeBtn.addEventListener('click', () => {
+      const rows = pickersContainer.querySelectorAll('.picker-row');
+      if (rows.length > 0) {
+        rows[rows.length - 1].remove();
+        updateAll();
+      }
+    });
+
+    // 初期で1行
+    const firstRow = createPickerRow();
+    pickersContainer.appendChild(firstRow);
+    updateAll();
+  </script>
+</body>
+</html>
